@@ -337,15 +337,6 @@ std::string getBootstrap()
 #endif
 }
 
-std::string getCachePath()
-{
-#ifdef _WIN32
-	return "c:/temp";
-#else
-	return "/tmp";
-#endif
-}
-
 void BrowserManager::Impl::BrowserManagerEntry()
 {
 	std::string bootstrapPath = getBootstrap();
@@ -358,7 +349,6 @@ void BrowserManager::Impl::BrowserManagerEntry()
 		settings.no_sandbox = true;
 		CefString(&settings.cache_path).FromASCII(obs_module_config_path(""));
 		CefString(&settings.browser_subprocess_path) = getBootstrap();
-		CefString(&settings.cache_path) = getCachePath();
 		CefRefPtr<BrowserApp> app(new BrowserApp());
 		CefExecuteProcess(mainArgs, app, nullptr);
 		CefInitialize(mainArgs, settings, app, nullptr);
