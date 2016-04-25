@@ -68,14 +68,8 @@ void BrowserSource::Impl::RenderCurrentTexture(gs_effect_t *effect)
 	GetParent()->LockTexture();
 
 	if (activeTexture != nullptr) {
-		gs_reset_blend_state();
-		gs_blend_function(GS_BLEND_DSTALPHA, GS_BLEND_INVSRCALPHA);
-		gs_effect_set_texture(
-				gs_effect_get_param_by_name(effect, "image"),
-				activeTexture);
-		gs_draw_sprite(activeTexture, 0, parent->GetWidth(), 
-				parent->GetHeight());
-		gs_reset_blend_state();
+		while (gs_effect_loop(obs_get_base_effect(OBS_EFFECT_PREMULTIPLIED_ALPHA), "Draw"))
+			obs_source_draw(activeTexture, 0, 0, 0, 0, false);
 	}
 	
 	GetParent()->UnlockTexture();

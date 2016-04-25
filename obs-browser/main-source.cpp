@@ -16,6 +16,7 @@
  ******************************************************************************/
 
 #include <obs-module.h>
+#include <util/dstr.h>
 
 #include "browser-source.hpp"
 #include "browser-manager.hpp"
@@ -27,7 +28,8 @@ static void browser_source_get_defaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, "width", 800);
 	obs_data_set_default_int(settings, "height", 600);
 	obs_data_set_default_int(settings, "fps", 30);
-	obs_data_set_default_bool(settings, "shutdown", true);
+	obs_data_set_default_bool(settings, "shutdown", false);
+	obs_data_set_default_string(settings, "css", "body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }");
 }
 
 static bool restart_button_clicked(obs_properties_t *props,
@@ -54,19 +56,33 @@ static bool is_local_file_modified(obs_properties_t *props,
 	return true;
 }
 
-static obs_properties_t *browser_source_get_properties(void *)
+static obs_properties_t *browser_source_get_properties(void *data)
 {
 	obs_properties_t *props = obs_properties_create();
+	struct dstr path = { 0 };
+	BrowserSource *bs = static_cast<BrowserSource *>(data);
 
 	obs_properties_set_flags(props, OBS_PROPERTIES_DEFER_UPDATE);
 	// use this when obs allows non-readonly paths
 	obs_property_t *prop = obs_properties_add_bool(props, "is_local_file",
 			obs_module_text("Local file"));
 
+	if (bs && bs->GetUrl() != "")
+	{
+		const char *slash;
+
+		dstr_copy(&path, bs->GetUrl().c_str());
+		dstr_replace(&path, "\\", "/");
+		slash = strrchr(path.array, '/');
+		if (slash)
+			dstr_resize(&path, slash - path.array + 1);
+	}
+
+
 	obs_property_set_modified_callback(prop, is_local_file_modified);
 	obs_properties_add_path(props, "local_file",
 			obs_module_text("Local file"), OBS_PATH_FILE, "*.*",
-			nullptr);
+			path.array);
 	obs_properties_add_text(props, "url",
 			obs_module_text("URL"), OBS_TEXT_DEFAULT);
 
@@ -80,6 +96,8 @@ static obs_properties_t *browser_source_get_properties(void *)
 		obs_module_text("CSS"), OBS_TEXT_MULTILINE);
 	obs_properties_add_bool(props, "shutdown",
 		obs_module_text("Shutdown when not active"));
+
+
 #ifdef __APPLE__
 	// osx is the only process-isolated cef impl
 	obs_properties_add_button(props, "restart",
@@ -211,10 +229,7 @@ create_browser_source_info()
 	browser_source_info.id = "browser_source";
 	browser_source_info.type = OBS_SOURCE_TYPE_INPUT;
 	browser_source_info.output_flags = OBS_SOURCE_VIDEO |
-			OBS_SOURCE_INTERACTION | OBS_SOURCE_DO_NOT_DUPLICATE;
-#ifdef __APPLE__
-	browser_source_info.output_flags |= OBS_SOURCE_CUSTOM_DRAW;
-#endif
+			OBS_SOURCE_INTERACTION | OBS_SOURCE_DO_NOT_DUPLICATE | OBS_SOURCE_CUSTOM_DRAW;
 	// interaction
 	browser_source_info.mouse_click = browser_source_mouse_click;
 	browser_source_info.mouse_move = browser_source_mouse_move;
